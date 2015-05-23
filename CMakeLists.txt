@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   sensor_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -14,22 +15,22 @@ find_package(catkin REQUIRED COMPONENTS
 
 
 
- #add_message_files(
- #  FILES
- #  IbeoObject2.msg
- #  IbeoObjectArray.msg
- #)
+ add_message_files(
+   FILES
+   IbeoObject2.msg
+   IbeoObjectArray.msg
+ )
 
 
- #generate_messages(
- #  DEPENDENCIES
- #  std_msgs
- #)
+ generate_messages(
+   DEPENDENCIES
+   std_msgs
+ )
 
 
 catkin_package(
 #  INCLUDE_DIRS include
-   CATKIN_DEPENDS roscpp sensor_msgs std_msgs
+   CATKIN_DEPENDS message_runtime roscpp sensor_msgs std_msgs
 )
 
 
@@ -40,7 +41,7 @@ include_directories(
 ) 
 
 add_executable( ${PROJECT_NAME} src/ros_polysync_bridge_node.cpp )
-#add_dependencies(${PROJECT_NAME}ros_polysync_bridge_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} ros_polysync_bridge_generate_messages_cpp)
 target_link_libraries( ${PROJECT_NAME}   ${catkin_LIBRARIES} ${PSYNC_LIBS}  )
 #target_link_libraries( ${PROJECT_NAME}   ${catkin_LIBRARIES}  )
 

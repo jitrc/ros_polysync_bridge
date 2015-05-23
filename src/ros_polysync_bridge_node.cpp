@@ -11,6 +11,8 @@
 //#include "sensor_msgs/LaserScan.h"
 //#include "tf/transform_broadcaster.h"
 #include "std_msgs/String.h"
+#include "ros_polysync_bridge/IbeoObject2.h"
+#include "ros_polysync_bridge/IbeoObjectArray.h"
 
 
 
@@ -22,7 +24,7 @@
 // global data
 // *****************************************************
 
-ros::Publisher chatter_pub;
+ros::Publisher ibeo_object_pub;
 int ret;
 
 
@@ -49,12 +51,66 @@ static void on_psync_data_ps_object_stream_msg( void *usr_data, ps_msg_type msg_
 {
 	// cast reference
 	ps_object_stream_msg *message = (ps_object_stream_msg*) topic_data;
+	char buffer [50];
 
     psync_log_message( LOG_LEVEL_INFO, "ps_object_stream_msg -- timestamp: %llu", message->header.timestamp );
+	ros_polysync_bridge::IbeoObjectArray msg_IbeoObjectArray;
+	msg_IbeoObjectArray.header.stamp =ros::Time().fromNSec(message->header.timestamp);
+	sprintf (buffer, "%lu_%du", message->sensor_descriptor.serial_number,message->sensor_descriptor.type);
 
-    // TODO
-    // copy message
-    // enqueue new message
+	msg_IbeoObjectArray.header.frame_id =buffer;
+	
+	ROS_INFO("ps_object_stream_msg -- timestamp: %llu # of objects: %d",   message->header.timestamp, message->objects._length);
+	
+	for( int idx=0; idx< message->objects._length; idx++ )
+	{
+		ros_polysync_bridge::IbeoObject2 msg_IbeoObject2;
+		msg_IbeoObject2.header.stamp 				= ros::Time().fromNSec(message->objects._buffer[ idx ].timestamp);
+		msg_IbeoObject2.m_objectId 					= message->objects._buffer[ idx ].id;
+		//msg_IbeoObject2.m_flags					
+		msg_IbeoObject2.m_objectAge					= message->objects._buffer[ idx ].age;
+		msg_IbeoObject2.m_hiddenStatusAge			= message->objects._buffer[ idx ].prediction_age;
+		msg_IbeoObject2.m_classification 			= message->objects._buffer[ idx ].classification_type;
+		msg_IbeoObject2.m_classificationAge			= message->objects._buffer[ idx ].classification_age;
+		msg_IbeoObject2.m_classificationQuality		= message->objects._buffer[ idx ].classification_certainty;
+		msg_IbeoObject2.m_centerPoint_x				= message->objects._buffer[ idx ].pos[0];
+		msg_IbeoObject2.m_centerPoint_y				= message->objects._buffer[ idx ].pos[1];
+		msg_IbeoObject2.m_centerPointSigma_x		= message->objects._buffer[ idx ].pos_sigma[0];
+		msg_IbeoObject2.m_centerPointSigma_y		= message->objects._buffer[ idx ].pos_sigma[1];
+		msg_IbeoObject2.m_courseAngle				= message->objects._buffer[ idx ].orientation;
+		//msg_IbeoObject2.m_courseAngleSigma				
+		msg_IbeoObject2.m_relativeVelocity_x				= message->objects._buffer[ idx ].vel[0];
+		msg_IbeoObject2.m_relativeVelocity_y				= message->objects._buffer[ idx ].vel[1];
+		msg_IbeoObject2.m_relativeVelocitySigma_x				= message->objects._buffer[ idx ].vel_sigma[0];
+		msg_IbeoObject2.m_relativeVelocitySigma_y				= message->objects._buffer[ idx ].vel_sigma[1];
+		//msg_IbeoObject2.m_absoluteVelocity_x				
+		//msg_IbeoObject2.m_absoluteVelocity_y				
+		//msg_IbeoObject2.m_absoluteVelocitySigma_x				
+		//msg_IbeoObject2.m_absoluteVelocitySigma_y				
+		msg_IbeoObject2.m_objectBox_x				= message->objects._buffer[ idx ].size[0];
+		msg_IbeoObject2.m_objectBox_y				= message->objects._buffer[ idx ].size[1];
+		//msg_IbeoObject2.m_objectBoxSigma_x		
+		//msg_IbeoObject2.m_objectBoxSigma_y		
+		//msg_IbeoObject2.m_boundingBoxCenter_x		
+		//msg_IbeoObject2.m_boundingBoxCenter_y	
+		//msg_IbeoObject2.m_boundingBox_x				
+		//msg_IbeoObject2.m_boundingBox_y				
+		//msg_IbeoObject2.m_closestPoint_x				
+		//msg_IbeoObject2.m_closestPoint_y				
+		//msg_IbeoObject2.m_contourPoints_x.push_back();
+		//msg_IbeoObject2.m_contourPoints_y.push_back();
+		//msg_IbeoObject2.m_vehicleWLANid
+		//msg_IbeoObject2.m_objectHeight
+		//msg_IbeoObject2.m_objectHeightSigma
+		//msg_IbeoObject2.m_objectMass
+		//msg_IbeoObject2.m_isValid
+
+		
+		msg_IbeoObjectArray.objects.push_back(msg_IbeoObject2);
+		
+	}
+	ibeo_object_pub.publish(msg_IbeoObjectArray);
+/*
     std_msgs::String msg;
 
     std::stringstream ss;
@@ -64,7 +120,7 @@ static void on_psync_data_ps_object_stream_msg( void *usr_data, ps_msg_type msg_
     ROS_INFO("%s", msg.data.c_str());
 
 
-    chatter_pub.publish(msg);
+    chatter_pub.publish(msg);*/
 }
 
 int polysync_GRACEFUL_EXIT_STMNT()
@@ -87,7 +143,7 @@ int main( int argc, char **argv )
     const char *node_name = "ROS_PolySynce_Bridge";
     ros::init(argc, argv, "ROS_PolySynce_Bridge");
 	ros::NodeHandle n;
-	chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
+	ibeo_object_pub = n.advertise<ros_polysync_bridge::IbeoObjectArray>("polysync_ibeo_object_stream", 1000);
 	//ros::Rate loop_rate(10);
     // flag to enable stdout logs in addition to the normal syslog output
     unsigned int stdout_logging_enabled = 1;
