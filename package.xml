@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<package>
+  <name>ros_polysync_bridge</name>
+  <version>1.0.0</version>
+  <description>The ros_polysync_bridge package
+  converts msg types to -> ros msg
+	MSG_TYPE_BYTE_STREAM           0UL
+	MSG_TYPE_DIAGNOSTIC_STATE      1UL
+	MSG_TYPE_LOGGER_PACKET         2UL
+	MSG_TYPE_CAN_DATA              3UL
+	MSG_TYPE_RADAR_TRACK_STREAM    4UL
+	MSG_TYPE_OBJECT_STREAM         5UL
+	MSG_TYPE_LIDAR_POINT_STREAM    6UL
+	MSG_TYPE_IO_SAMPLE_STREAM      7UL
+	MSG_TYPE_VIDEO_STREAM          8UL
+	MSG_TYPE_PLATFORM_MOTION       9UL
+	MSG_TYPE_VEHICLE_CONTROL       10UL
+	MSG_TYPE_VEHICLE_OBD           11UL
+	MSG_TYPE_LANE_MODEL            12UL
+	MSG_TYPE_EVENT                 13UL
+	MSG_TYPE_PARAMETER_STREAM      14UL
+	MSG_TYPE_TERRAIN_DATA          15UL
+	MSG_TYPE_OBSTACLE_STREAM       16UL
+	MSG_TYPE_POINT_STREAM          17UL
+	MSG_TYPE_TRAFFIC_SIGN_STREAM   18UL
+  </description>
+  <maintainer email="jit.ray.c@gmail.com">Jit Ray Chowdhury</maintainer>
+  <license>GPLv3</license>
+  <url type="repository">https://github.com/jitrc/ros_polysync_bridge</url> 
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
+
+</package>
