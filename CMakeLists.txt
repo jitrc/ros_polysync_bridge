@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(ros_polysync_bridge)
-cmake_policy(SET CMP0054 NEW)
+#cmake_policy(SET CMP0054 NEW)
 include( polysync_build_res.cmake )
 
 find_package(catkin REQUIRED COMPONENTS
@@ -19,6 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    IbeoObject2.msg
    IbeoObjectArray.msg
+   laneModel.msg
+   laneModelAll.msg
  )
 
 

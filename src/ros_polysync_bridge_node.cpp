@@ -13,6 +13,8 @@
 #include "std_msgs/String.h"
 #include "ros_polysync_bridge/IbeoObject2.h"
 #include "ros_polysync_bridge/IbeoObjectArray.h"
+#include "ros_polysync_bridge/laneModel.h"
+#include "ros_polysync_bridge/laneModelAll.h"
 
 
 
@@ -25,6 +27,7 @@
 // *****************************************************
 
 ros::Publisher ibeo_object_pub;
+ros::Publisher lane_model_pub;
 int ret;
 
 
@@ -40,7 +43,7 @@ int ret;
  * @warning Do not modify topic_data.
  */
 static void on_psync_data_ps_object_stream_msg( void *usr_data, ps_msg_type msg_type, void *topic_data );
-
+static void on_psync_data_ps_lane_model_msg(void *usr_data, ps_msg_type msg_type, void *topic_data);
 
 // *****************************************************
 // static definitions
@@ -123,6 +126,85 @@ static void on_psync_data_ps_object_stream_msg( void *usr_data, ps_msg_type msg_
     chatter_pub.publish(msg);*/
 }
 
+
+static void on_psync_data_ps_lane_model_msg(void *usr_data, ps_msg_type msg_type, void *topic_data) 
+{
+	// cast reference
+	ps_lane_model_msg *message = (ps_lane_model_msg*) topic_data;
+	char buffer [50];
+
+    psync_log_message( LOG_LEVEL_INFO, "ps_lane_model_msg -- timestamp: %llu", message->header.timestamp );
+	ros_polysync_bridge::laneModelAll msg_LaneModelAll;
+	msg_LaneModelAll.header.stamp =ros::Time().fromNSec(message->header.timestamp);
+	sprintf (buffer, "%lu_%du", message->sensor_descriptor.serial_number,message->sensor_descriptor.type);
+
+	msg_LaneModelAll.header.frame_id =buffer;
+	
+	ROS_INFO("ps_lane_model_msg -- timestamp: %llu # of lanes: %d",   message->header.timestamp, 2 + message->additional_lanes._length);
+	
+	   ros_polysync_bridge::laneModel msg_left_lane;
+	   ros_polysync_bridge::laneModel msg_right_lane;
+	   ros_polysync_bridge::laneModel msg_lane;
+	   
+		//msg_left_lane.m_is_valid 				    = message->left_lane.is_valid;
+		//msg_IbeoObject2.m_detection_confidence 					= message->objects._buffer[ idx ].id;
+		//msg_IbeoObject2.m_flags					
+		msg_left_lane.m_marker_width		= message->left_lane.marker_width;
+		msg_left_lane.m_heading_angle		= message->left_lane.heading_angle;
+		msg_left_lane.m_view_range 			= message->left_lane.view_range;
+		msg_left_lane.m_time_to_crossing    = message->left_lane.time_to_crossing;
+		msg_left_lane.m_lane_crossing		= message->left_lane.lane_crossing;
+		msg_left_lane.m_lane_offset			= message->left_lane.lane_offset;
+		msg_left_lane.m_curvature			= message->left_lane.curvature;
+		msg_left_lane.m_curvature_derivative		= message->left_lane.curvature_derivative;
+		
+	    msg_right_lane.m_marker_width		= message->right_lane.marker_width;
+		msg_right_lane.m_heading_angle		= message->right_lane.heading_angle;
+		msg_right_lane.m_view_range 		= message->right_lane.view_range;
+		msg_right_lane.m_time_to_crossing   = message->right_lane.time_to_crossing;
+		msg_right_lane.m_lane_crossing		= message->right_lane.lane_crossing;
+		msg_right_lane.m_lane_offset		= message->right_lane.lane_offset;
+		msg_right_lane.m_curvature			= message->right_lane.curvature;
+		msg_right_lane.m_curvature_derivative		= message->right_lane.curvature_derivative;
+		
+		//msg_IbeoObjectArray.objects.push_back(msg_IbeoObject2);
+		msg_LaneModelAll.m_left_lane = msg_left_lane;
+		msg_LaneModelAll.m_right_lane = msg_right_lane;
+		
+		msg_LaneModelAll.m_reference_point_x = message->reference_point[0];
+		msg_LaneModelAll.m_reference_point_y = message->reference_point[1];
+		msg_LaneModelAll.m_reference_point_z = message->reference_point[2];
+		
+		
+		for(int id = 0; id < message->additional_lanes._length; id++){
+		    msg_lane.m_marker_width		= message->additional_lanes._buffer[id].marker_width;
+		    msg_lane.m_heading_angle	= message->additional_lanes._buffer[id].heading_angle;
+			msg_lane.m_view_range 		= message->additional_lanes._buffer[id].view_range;
+			msg_lane.m_time_to_crossing = message->additional_lanes._buffer[id].time_to_crossing;
+			msg_lane.m_lane_crossing	= message->additional_lanes._buffer[id].lane_crossing;
+			msg_lane.m_lane_offset		= message->additional_lanes._buffer[id].lane_offset;
+			msg_lane.m_curvature		= message->additional_lanes._buffer[id].curvature;
+			msg_lane.m_curvature_derivative	= message->additional_lanes._buffer[id].curvature_derivative;
+		    
+		    msg_LaneModelAll.m_additional_lanes.push_back(msg_lane);		    
+		}
+		
+	
+	lane_model_pub.publish(msg_LaneModelAll);
+/*
+    std_msgs::String msg;
+
+    std::stringstream ss;
+    ss << "hello world ";
+    msg.data = ss.str();
+
+    ROS_INFO("%s", msg.data.c_str());
+
+
+    chatter_pub.publish(msg);*/
+	
+}	
+
 int polysync_GRACEFUL_EXIT_STMNT()
 {
 	if( (ret = psync_release( 0 )) != DTC_RET( DTC_NONE ) )
@@ -144,6 +226,7 @@ int main( int argc, char **argv )
     ros::init(argc, argv, "ROS_PolySynce_Bridge");
 	ros::NodeHandle n;
 	ibeo_object_pub = n.advertise<ros_polysync_bridge::IbeoObjectArray>("polysync_ibeo_object_stream", 1000);
+	lane_model_pub = n.advertise<ros_polysync_bridge::laneModelAll>("polysync_lane_model_all", 1000);
 	//ros::Rate loop_rate(10);
     // flag to enable stdout logs in addition to the normal syslog output
     unsigned int stdout_logging_enabled = 1;
@@ -174,14 +257,14 @@ int main( int argc, char **argv )
         psync_log_message( LOG_LEVEL_ERROR, "main -- psync_message_register_listener - ret: %d", ret );
         return polysync_GRACEFUL_EXIT_STMNT();
     }
-/*
+
     // register a listener for lane model messages
     if( (ret = psync_message_register_listener( MSG_TYPE_LANE_MODEL, on_psync_data_ps_lane_model_msg, NULL )) != DTC_RET( DTC_NONE ) )
     {
         psync_log_message( LOG_LEVEL_ERROR, "main -- psync_message_register_listener - ret: %d", ret );
         return polysync_GRACEFUL_EXIT_STMNT();
     }
-
+/*
     // register a listener for platform motion messages
     if( (ret = psync_message_register_listener( MSG_TYPE_PLATFORM_MOTION, on_psync_data_ps_platform_motion_msg, NULL )) != DTC_RET( DTC_NONE ) )
     {
