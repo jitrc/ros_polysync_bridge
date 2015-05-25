@@ -24,7 +24,7 @@ int16 Echo_7 = 8
 int16 m_echo_kind
 
 # The point kind of lidar point.
-int16 None = 0
+int16 Point_None = 0
 int16 Unknown = 1
 int16 Transparent = 2
 int16 Clutter = 3 

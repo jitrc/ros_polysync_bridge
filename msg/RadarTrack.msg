@@ -35,7 +35,7 @@ float64 m_velocity_z
 float64 m_amplitude # track amp in db
 
 # The range mode kind for radar
-int16 None = 0              
+int16 NotKnown = 0              
 int16 Short = 1              
 int16 Medium = 2                
 int16 Long = 3                 
