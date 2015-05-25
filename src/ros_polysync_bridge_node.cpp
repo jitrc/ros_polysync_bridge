@@ -13,8 +13,12 @@
 #include "std_msgs/String.h"
 #include "ros_polysync_bridge/IbeoObject2.h"
 #include "ros_polysync_bridge/IbeoObjectArray.h"
-#include "ros_polysync_bridge/laneModel.h"
-#include "ros_polysync_bridge/laneModelAll.h"
+#include "ros_polysync_bridge/LaneModel.h"
+#include "ros_polysync_bridge/LaneModelAll.h"
+#include "ros_polysync_bridge/RadarTrack.h"
+#include "ros_polysync_bridge/RadarTrackArray.h"
+#include "ros_polysync_bridge/LidarPoint.h"
+#include "ros_polysync_bridge/LidarPointArray.h"
 
 
 
@@ -28,6 +32,9 @@
 
 ros::Publisher ibeo_object_pub;
 ros::Publisher lane_model_pub;
+ros::Publisher lidar_points_pub;
+ros::Publisher radar_track_pub;
+
 int ret;
 
 
@@ -126,6 +133,77 @@ static void on_psync_data_ps_object_stream_msg( void *usr_data, ps_msg_type msg_
     chatter_pub.publish(msg);*/
 }
 
+static void on_psync_data_ps_lidar_point_stream_msg( void *usr_data, ps_msg_type msg_type, void *topic_data )
+{
+	// cast reference
+	ps_lidar_point_stream_msg *message = (ps_lidar_point_stream_msg*) topic_data;
+	char buffer [50];
+
+    psync_log_message( LOG_LEVEL_INFO, "ps_lidar_point_stream_msg -- timestamp: %llu", message->header.timestamp );
+	ros_polysync_bridge::LidarPointArray msg_LidarPointArray;
+	msg_LidarPointArray.header.stamp =ros::Time().fromNSec(message->header.timestamp);
+	sprintf (buffer, "%lu_%du", message->sensor_descriptor.serial_number,message->sensor_descriptor.type);
+
+	msg_LidarPointArray.header.frame_id =buffer;
+	
+	ROS_INFO("ps_lidar_point_stream_msg -- timestamp: %llu # of lidar_points: %d",   message->header.timestamp, message->points._length);
+	
+	for( int idx=0; idx< message->points._length; idx++ )
+	{
+		ros_polysync_bridge::LidarPoint msg_LidarPoint;
+					
+		msg_LidarPoint.m_layer_kind				= message->points._buffer[ idx ].layer;
+		msg_LidarPoint.m_echo_kind				= message->points._buffer[ idx ].echo;
+		msg_LidarPoint.m_point_kind 			= message->points._buffer[ idx ].type;
+		msg_LidarPoint.m_echo_pulse_width		= message->points._buffer[ idx ].echo_pulse_width;
+		msg_LidarPoint.m_position_x				= message->points._buffer[ idx ].pos[0];
+		msg_LidarPoint.m_position_y				= message->points._buffer[ idx ].pos[1];
+		msg_LidarPoint.m_position_z				= message->points._buffer[ idx ].pos[2];
+
+		msg_LidarPointArray.m_lidar_points.push_back(msg_LidarPoint);
+		
+	}
+	lidar_points_pub.publish(msg_LidarPointArray);
+
+}
+
+static void on_psync_data_ps_radar_track_stream_msg( void *usr_data, ps_msg_type msg_type, void *topic_data )
+{
+	// cast reference
+	ps_radar_track_stream_msg *message = (ps_radar_track_stream_msg*) topic_data;
+	char buffer [50];
+
+    psync_log_message( LOG_LEVEL_INFO, "ps_radar_track_stream_msg -- timestamp: %llu", message->header.timestamp );
+	ros_polysync_bridge::RadarTrackArray msg_RadarTrackArray;
+	msg_RadarTrackArray.header.stamp =ros::Time().fromNSec(message->header.timestamp);
+	sprintf (buffer, "%lu_%du", message->sensor_descriptor.serial_number,message->sensor_descriptor.type);
+
+	msg_RadarTrackArray.header.frame_id =buffer;
+	
+	ROS_INFO("ps_radar_track_stream_msg -- timestamp: %llu # of radar_tracks: %d",   message->header.timestamp, message->tracks._length);
+	
+	for( int idx=0; idx< message->tracks._length; idx++ )
+	{
+		ros_polysync_bridge::RadarTrack msg_RadarTrack;
+		msg_RadarTrack.header.stamp 				= ros::Time().fromNSec(message->tracks._buffer[ idx ].timestamp);
+		msg_RadarTrack.m_objectId 					= message->tracks._buffer[ idx ].id;		
+		msg_RadarTrack.m_track_status				= message->tracks._buffer[ idx ].status;
+		msg_RadarTrack.m_position_x				= message->tracks._buffer[ idx ].pos[0];
+		msg_RadarTrack.m_position_y				= message->tracks._buffer[ idx ].pos[1];
+		msg_RadarTrack.m_position_z				= message->tracks._buffer[ idx ].pos[2];
+		msg_RadarTrack.m_velocity_x 			= message->tracks._buffer[ idx ].vel[0];
+		msg_RadarTrack.m_velocity_y 			= message->tracks._buffer[ idx ].vel[1];
+		msg_RadarTrack.m_velocity_z 			= message->tracks._buffer[ idx ].vel[2];
+		msg_RadarTrack.m_amplitude		        = message->tracks._buffer[ idx ].amplitude;
+		msg_RadarTrack.m_range_mode				= message->tracks._buffer[ idx ].range_mode;
+		msg_RadarTrack.m_scan_index				= message->tracks._buffer[ idx ].scan_index;
+
+		msg_RadarTrackArray.m_radar_tracks.push_back(msg_RadarTrack);
+		
+	}
+	radar_track_pub.publish(msg_RadarTrackArray);
+
+}
 
 static void on_psync_data_ps_lane_model_msg(void *usr_data, ps_msg_type msg_type, void *topic_data) 
 {
@@ -134,7 +212,7 @@ static void on_psync_data_ps_lane_model_msg(void *usr_data, ps_msg_type msg_type
 	char buffer [50];
 
     psync_log_message( LOG_LEVEL_INFO, "ps_lane_model_msg -- timestamp: %llu", message->header.timestamp );
-	ros_polysync_bridge::laneModelAll msg_LaneModelAll;
+	ros_polysync_bridge::LaneModelAll msg_LaneModelAll;
 	msg_LaneModelAll.header.stamp =ros::Time().fromNSec(message->header.timestamp);
 	sprintf (buffer, "%lu_%du", message->sensor_descriptor.serial_number,message->sensor_descriptor.type);
 
@@ -142,9 +220,9 @@ static void on_psync_data_ps_lane_model_msg(void *usr_data, ps_msg_type msg_type
 	
 	ROS_INFO("ps_lane_model_msg -- timestamp: %llu # of lanes: %d",   message->header.timestamp, 2 + message->additional_lanes._length);
 	
-	   ros_polysync_bridge::laneModel msg_left_lane;
-	   ros_polysync_bridge::laneModel msg_right_lane;
-	   ros_polysync_bridge::laneModel msg_lane;
+	   ros_polysync_bridge::LaneModel msg_left_lane;
+	   ros_polysync_bridge::LaneModel msg_right_lane;
+	   ros_polysync_bridge::LaneModel msg_lane;
 	   
 		//msg_left_lane.m_is_valid 				    = message->left_lane.is_valid;
 		//msg_IbeoObject2.m_detection_confidence 					= message->objects._buffer[ idx ].id;
@@ -226,7 +304,9 @@ int main( int argc, char **argv )
     ros::init(argc, argv, "ROS_PolySynce_Bridge");
 	ros::NodeHandle n;
 	ibeo_object_pub = n.advertise<ros_polysync_bridge::IbeoObjectArray>("polysync_ibeo_object_stream", 1000);
-	lane_model_pub = n.advertise<ros_polysync_bridge::laneModelAll>("polysync_lane_model_all", 1000);
+	lane_model_pub = n.advertise<ros_polysync_bridge::LaneModelAll>("polysync_lane_model_all", 1000);
+	lidar_points_pub = n.advertise<ros_polysync_bridge::LidarPointArray>("polysync_lidar_points_stream", 1000);
+	radar_track_pub = n.advertise<ros_polysync_bridge::RadarTrackArray>("polysync_radar_track_stream", 1000);
 	//ros::Rate loop_rate(10);
     // flag to enable stdout logs in addition to the normal syslog output
     unsigned int stdout_logging_enabled = 1;
@@ -264,6 +344,21 @@ int main( int argc, char **argv )
         psync_log_message( LOG_LEVEL_ERROR, "main -- psync_message_register_listener - ret: %d", ret );
         return polysync_GRACEFUL_EXIT_STMNT();
     }
+    
+   // register a listener for lidar point stream messages
+        if( (ret = psync_message_register_listener( MSG_TYPE_LIDAR_POINT_STREAM , on_psync_data_ps_lidar_point_stream_msg, NULL )) != DTC_RET( DTC_NONE ) )
+    {
+        psync_log_message( LOG_LEVEL_ERROR, "main -- psync_message_register_listener - ret: %d", ret );
+        return polysync_GRACEFUL_EXIT_STMNT();
+    }
+    
+   // register a listener for radar track stream messages
+        if( (ret = psync_message_register_listener( MSG_TYPE_RADAR_TRACK_STREAM , on_psync_data_ps_radar_track_stream_msg, NULL )) != DTC_RET( DTC_NONE ) )
+    {
+        psync_log_message( LOG_LEVEL_ERROR, "main -- psync_message_register_listener - ret: %d", ret );
+        return polysync_GRACEFUL_EXIT_STMNT();
+    }
+
 /*
     // register a listener for platform motion messages
     if( (ret = psync_message_register_listener( MSG_TYPE_PLATFORM_MOTION, on_psync_data_ps_platform_motion_msg, NULL )) != DTC_RET( DTC_NONE ) )

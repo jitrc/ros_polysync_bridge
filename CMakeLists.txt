@@ -19,8 +19,12 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    IbeoObject2.msg
    IbeoObjectArray.msg
-   laneModel.msg
-   laneModelAll.msg
+   LaneModel.msg
+   LaneModelAll.msg
+   RadarTrack.msg
+   RadarTrackArray.msg
+   LidarPoint.msg
+   LidarPointArray.msg
  )
 
 
